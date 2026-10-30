@@ -1,0 +1,3 @@
+"training_seasons","balls","brier","predicted_hr","actual_hr"
+"2019, 2021-2024",9701,0.0267,238,201
+"2022-2024",5944,0.0252,224,201

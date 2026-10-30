@@ -1,0 +1,13 @@
+# Private study notes and lesson files
+study-notes/
+reference/
+run_logs/
+
+# Data is large and can be rebuilt with R/01_pull_games.R and R/02_pull_statcast.R
+data/
+
+# Local tool files
+.Rproj.user/
+.Rhistory
+.RData
+.claude/

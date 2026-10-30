@@ -1,0 +1,7 @@
+"wind_label","wind_speed","temp","expected_hr"
+"Calm",0,70,2.23
+"Out To CF",10,75,3.02
+"Out To CF",20,85,4.01
+"In From CF",10,60,1.46
+"In From CF",20,50,0.86
+"L To R",15,70,2.2
