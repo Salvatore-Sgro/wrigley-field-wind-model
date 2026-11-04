@@ -1,5 +1,0 @@
-"model","brier","log_loss"
-"Average rate",0.0867,0.3159
-"Logistic regression",0.0652,0.2048
-"GAM, no weather",0.035,0.1091
-"GAM, with weather",0.0267,0.0864

@@ -1,8 +1,8 @@
 "model","r_squared","aic","ft_per_mph_tailwind"
-"Tailwind only",0.009,66718,0.81
-"Add exit velocity, launch angle, temperature",0.876,54284,1.01
-"Launch angle as a quadratic",0.901,52928,1.08
-"Smooth launch angle",0.904,52742,1.07
-"Smooth exit velocity too",0.907,52567,1.06
-"Exit velocity and launch angle interact",0.919,51723,1.04
-"Add hit direction",0.925,51314,1.01
+"Tailwind only",0.009,80133,0.8
+"Add exit velocity, launch angle, temperature",0.874,65288,1.04
+"Launch angle as a quadratic",0.901,63549,1.12
+"Smooth launch angle",0.905,63296,1.1
+"Smooth exit velocity too",0.908,63077,1.09
+"Exit velocity and launch angle interact",0.919,62093,1.07
+"Add hit direction",0.925,61591,1.05

@@ -10,9 +10,10 @@ suppressPackageStartupMessages({
 })
 
 air <- load_air_balls("venue_name = 'Wrigley Field'")
+TEST_SEASON <- max(air$season)
 
 # ---- Walk-forward: always train only on earlier seasons -------------------------------
-walk_forward <- do.call(rbind, lapply(2022:2025, function(test_season) {
+walk_forward <- do.call(rbind, lapply(FIRST_RECENT_SEASON:TEST_SEASON, function(test_season) {
   train <- subset(air, season < test_season)
   test <- subset(air, season == test_season)
   with_weather <- fit_hr_model(train)
@@ -40,15 +41,15 @@ chart <- ggplot(long, aes(factor(season), home_runs, fill = group)) +
   geom_text(aes(label = home_runs), position = position_dodge(width = 0.75), vjust = -0.4, size = 3.4) +
   scale_fill_manual(values = c("Predicted" = COLOR_CONTRAST, "Actual" = COLOR_WRIGLEY)) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
-  labs(title = "The model predicted too many home runs in every test season",
+  labs(title = "The model ran high in 2022-2025, then low in 2026",
        subtitle = "Trained only on earlier seasons, then given each ball's actual contact and weather.",
        x = NULL, y = "Home runs at Wrigley") +
   chart_theme()
 save_chart(chart, "predicted_vs_actual_by_season")
 
-# ---- The 2025 test in detail ------------------------------------------------------------
-train <- subset(air, season < 2025)
-test <- subset(air, season == 2025)
+# ---- The newest season's test in detail ---------------------------------------------------
+train <- subset(air, season < TEST_SEASON)
+test <- subset(air, season == TEST_SEASON)
 model_all <- fit_hr_model(train)
 p_all <- predict(model_all, test, type = "response")
 
@@ -62,14 +63,14 @@ save_table(data.frame(
                   brier(test$is_hr, p_no_weather), brier(test$is_hr, p_all)), 4),
   log_loss = round(c(log_loss(test$is_hr, p_base), log_loss(test$is_hr, p_logistic),
                      log_loss(test$is_hr, p_no_weather), log_loss(test$is_hr, p_all)), 4)
-), "scores_on_2025")
+), paste0("scores_on_", TEST_SEASON))
 
 calibration <- data.frame(p = p_all, y = test$is_hr)
 calibration$bucket <- cut(calibration$p, c(0, .01, .05, .1, .25, .5, .75, .9, 1), include.lowest = TRUE)
 save_table(do.call(rbind, lapply(split(calibration, calibration$bucket), function(d) data.frame(
   predicted_range = as.character(d$bucket[1]), balls = nrow(d),
   predicted = round(mean(d$p), 3), actual = round(mean(d$y), 3)
-))), "calibration_2025")
+))), paste0("calibration_", TEST_SEASON))
 
 # ---- Why it runs high: the same contact has been carrying less ----------------------------
 hard_contact <- subset(air, launch_speed >= 100 & launch_angle >= 22 & launch_angle <= 34)
@@ -81,10 +82,10 @@ save_table(do.call(rbind, lapply(split(hard_contact, hard_contact$season), funct
 ))), "hard_contact_by_season")
 
 # ---- A fix: train only on recent seasons --------------------------------------------------
-recent <- subset(air, season %in% 2022:2024)
+recent <- subset(air, season >= FIRST_RECENT_SEASON & season < TEST_SEASON)
 p_recent <- predict(fit_hr_model(recent), test, type = "response")
 save_table(data.frame(
-  training_seasons = c("2019, 2021-2024", "2022-2024"),
+  training_seasons = c(season_label(train$season), season_label(recent$season)),
   balls = c(nrow(train), nrow(recent)),
   brier = round(c(brier(test$is_hr, p_all), brier(test$is_hr, p_recent)), 4),
   predicted_hr = round(c(sum(p_all), sum(p_recent))),

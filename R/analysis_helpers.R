@@ -32,6 +32,17 @@ fit_hr_model_no_weather <- function(data) {
       data = data, family = binomial, method = "REML")
 }
 
+# Seasons from 2022 on are "recent": validation showed older seasons teach a relationship that no
+# longer holds. The newest season in the data is the out-of-sample test season.
+FIRST_RECENT_SEASON <- 2022
+
+# Writes a set of seasons compactly, e.g. c(2019, 2021, 2022, 2023) -> "2019, 2021-2023".
+season_label <- function(seasons) {
+  seasons <- sort(unique(seasons))
+  runs <- split(seasons, cumsum(c(1, diff(seasons) != 1)))
+  paste(sapply(runs, function(r) if (length(r) == 1) r else paste0(r[1], "-", r[length(r)])), collapse = ", ")
+}
+
 brier <- function(y, p) mean((y - p)^2)
 log_loss <- function(y, p) -mean(y * log(p) + (1 - y) * log(1 - p))
 

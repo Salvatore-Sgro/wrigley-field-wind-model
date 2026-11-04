@@ -1,5 +1,5 @@
 # Fits the final model on recent seasons, estimates home runs added by wind, and tests the pre-game
-# forecast on 2025.
+# forecast on the newest season.
 # Usage: Rscript R/07_results.R
 
 source("R/config.R")
@@ -10,9 +10,10 @@ suppressPackageStartupMessages({
 })
 
 air <- load_air_balls("venue_name = 'Wrigley Field'")
+TEST_SEASON <- max(air$season)
 
 # Validation showed older seasons teach a relationship that no longer holds.
-final_balls <- subset(air, season >= 2022)
+final_balls <- subset(air, season >= FIRST_RECENT_SEASON)
 final_model <- fit_hr_model(final_balls)
 
 save_table(data.frame(
@@ -62,7 +63,8 @@ chart <- ggplot(by_direction, aes(hr_from_wind_per_game, wind_label,
   scale_fill_manual(values = c("TRUE" = COLOR_WRIGLEY, "FALSE" = COLOR_CONTRAST), guide = "none") +
   scale_x_continuous(expand = expansion(mult = 0.15)) +
   labs(title = "Home runs per game added or removed by the wind at Wrigley",
-       subtitle = "Model estimate, 2022-2025, compared with the same batted balls in calm air.",
+       subtitle = paste0("Model estimate, ", season_label(final_balls$season),
+                         ", compared with the same batted balls in calm air."),
        x = "Home runs per game", y = NULL) +
   chart_theme()
 save_chart(chart, "wind_effect_by_direction")
@@ -77,37 +79,37 @@ scenarios$expected_hr <- round(mapply(function(s, l, t) forecast_hr(final_model,
                                       scenarios$wind_speed, scenarios$wind_label, scenarios$temp), 2)
 save_table(scenarios, "forecast_scenarios")
 
-# ---- Testing the pre-game forecast on 2025 --------------------------------------------------
-past <- subset(air, season %in% 2022:2024)
-test <- subset(air, season == 2025)
+# ---- Testing the pre-game forecast on the newest season ---------------------------------------
+past <- subset(air, season >= FIRST_RECENT_SEASON & season < TEST_SEASON)
+test <- subset(air, season == TEST_SEASON)
 past_model <- fit_hr_model(past)
 
-games_2025 <- do.call(rbind, lapply(split(test, test$game_pk), function(d) data.frame(
+test_games <- do.call(rbind, lapply(split(test, test$game_pk), function(d) data.frame(
   wind_label = d$wind_label[1], wind_speed = d$wind_speed[1], temp = d$temp[1], home_runs = sum(d$is_hr)
 )))
-games_2025$forecast <- mapply(function(s, l, t) forecast_hr(past_model, past, s, l, t),
-                              games_2025$wind_speed, games_2025$wind_label, games_2025$temp)
+test_games$forecast <- mapply(function(s, l, t) forecast_hr(past_model, past, s, l, t),
+                              test_games$wind_speed, test_games$wind_label, test_games$temp)
 naive <- sum(past$is_hr) / length(unique(past$game_pk))
 
 save_table(data.frame(
   forecast = c("Past average", "Weather forecast"),
-  avg_forecast = round(c(naive, mean(games_2025$forecast)), 2),
-  avg_actual = round(mean(games_2025$home_runs), 2),
-  avg_miss = round(c(mean(abs(games_2025$home_runs - naive)),
-                     mean(abs(games_2025$home_runs - games_2025$forecast))), 2)
-), "forecast_test_2025")
-cat("Correlation of forecast with actual home runs:", round(cor(games_2025$forecast, games_2025$home_runs), 2), "\n")
+  avg_forecast = round(c(naive, mean(test_games$forecast)), 2),
+  avg_actual = round(mean(test_games$home_runs), 2),
+  avg_miss = round(c(mean(abs(test_games$home_runs - naive)),
+                     mean(abs(test_games$home_runs - test_games$forecast))), 2)
+), paste0("forecast_test_", TEST_SEASON))
+cat("Correlation of forecast with actual home runs:", round(cor(test_games$forecast, test_games$home_runs), 2), "\n")
 
-games_2025$group <- cut(games_2025$forecast, quantile(games_2025$forecast, c(0, 1/3, 2/3, 1)),
+test_games$group <- cut(test_games$forecast, quantile(test_games$forecast, c(0, 1/3, 2/3, 1)),
                         include.lowest = TRUE, labels = c("Low", "Middle", "High"))
-save_table(do.call(rbind, lapply(split(games_2025, games_2025$group), function(d) data.frame(
+save_table(do.call(rbind, lapply(split(test_games, test_games$group), function(d) data.frame(
   forecast_group = d$group[1], games = nrow(d), forecast = round(mean(d$forecast), 2),
   actual = round(mean(d$home_runs), 2)
-))), "forecast_test_2025_groups")
+))), paste0("forecast_test_", TEST_SEASON, "_groups"))
 
-# Why it runs low before the game: 2025 had more and better contact than the seasons it replays.
+# The forecast replays past contact, so compare the test season's contact with the seasons it replays.
 save_table(data.frame(
-  seasons = c("2022-2024", "2025"),
+  seasons = c(season_label(past$season), season_label(test$season)),
   balls_in_air_per_game = round(c(nrow(past) / length(unique(past$game_pk)),
                                   nrow(test) / length(unique(test$game_pk))), 1),
   hard_contact_per_game = round(c(

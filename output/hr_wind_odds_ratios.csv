@@ -1,3 +1,3 @@
 "model","odds_ratio_per_mph","odds_ratio_15_mph"
-"Logistic regression",1.052,2.13
-"Logistic GAM",1.113,4.99
+"Logistic regression",1.049,2.06
+"Logistic GAM",1.119,5.39

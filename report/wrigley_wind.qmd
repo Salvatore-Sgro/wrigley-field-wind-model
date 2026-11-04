@@ -10,13 +10,15 @@ runs to expect given a weather forecast.
 **The short answer:** each mph of tailwind adds about 1 foot to a fly ball at Wrigley, compared with
 about 0.2 feet at other open-air parks. A 15 mph tailwind multiplies a ball's odds of being a home
 run by about 5, and the effect is largest on balls that land near the wall. When tested on seasons
-it hadn't seen, the wind effect held up, but the model predicted too many home runs. That problem
-is covered in [Testing on new seasons](#testing-on-new-seasons).
+it hadn't seen, the wind effect held up, but home-run totals drifted: the model predicted too many
+home runs in 2022-2025 and too few in 2026. That problem is covered in
+[Testing on new seasons](#testing-on-new-seasons).
 
 ## Data
 
-- **Batted balls:** about 4.3 million regular-season pitches from Baseball Savant (Statcast) for 2019
-  and 2021-2025. I left out the shortened 2020 season.
+- **Batted balls:** about 5.0 million regular-season pitches from Baseball Savant (Statcast) for 2019
+  and 2021-2026. I left out the shortened 2020 season. The 2026 season was added in November 2026,
+  after the first version of this analysis, and every result below was rerun with it.
 - **Weather:** game-time temperature and wind from the MLB Stats API, joined on MLB's game ID.
 - **Storage:** a local DuckDB database, with a resumable download so an interruption can't leave
   duplicate or partial data.
@@ -38,9 +40,9 @@ to one side and hurt balls hit to the other.
 
 ## What the raw data shows
 
-Wrigley games with the wind blowing out average 3.52 home runs, compared with 1.81 when it's blowing
+Wrigley games with the wind blowing out average 3.65 home runs, compared with 1.82 when it's blowing
 in. But that comparison can't be taken at face value, because wind-out days are also about 10 degrees
-warmer (75.7° vs. 66.0°), and warm air helps the ball carry too.
+warmer (76.0° vs. 65.8°), and warm air helps the ball carry too.
 
 The bigger surprise came from comparing Wrigley with other parks, using fly balls hit equally hard:
 
@@ -57,13 +59,13 @@ I built up the distance model in steps, tracking the tailwind estimate at each o
 
 | Model | R² | AIC | Feet per mph of tailwind |
 |---|---:|---:|---:|
-| Tailwind only | 0.009 | 66,718 | 0.81 |
-| Add exit velocity, launch angle, temperature | 0.876 | 54,284 | 1.01 |
-| Launch angle as a quadratic | 0.901 | 52,928 | 1.08 |
-| Smooth launch angle (GAM) | 0.904 | 52,742 | 1.07 |
-| Smooth exit velocity too | 0.907 | 52,567 | 1.06 |
-| Exit velocity and launch angle interact | 0.919 | 51,723 | 1.04 |
-| Add hit direction | 0.925 | 51,314 | 1.01 |
+| Tailwind only | 0.009 | 80,133 | 0.80 |
+| Add exit velocity, launch angle, temperature | 0.874 | 65,288 | 1.04 |
+| Launch angle as a quadratic | 0.901 | 63,549 | 1.12 |
+| Smooth launch angle (GAM) | 0.905 | 63,296 | 1.10 |
+| Smooth exit velocity too | 0.908 | 63,077 | 1.09 |
+| Exit velocity and launch angle interact | 0.919 | 62,093 | 1.07 |
+| Add hit direction | 0.925 | 61,591 | 1.05 |
 
 Three things stand out:
 
@@ -75,28 +77,28 @@ Three things stand out:
 - **The estimate is stable.** It stayed close to 1 foot per mph through major changes to the model, so
   the result doesn't depend on one modeling choice.
 
-Fitting Wrigley and other open-air parks in one model with an interaction gives **1.10 feet per mph at
-Wrigley and 0.18 elsewhere**.
+Fitting Wrigley and other open-air parks in one model with an interaction gives **1.13 feet per mph at
+Wrigley and 0.19 elsewhere**.
 
 The effect also isn't the same on every fly ball:
 
 ![Feet of distance per mph of tailwind at each launch angle](../output/tailwind_effect_by_launch_angle.png)
 
-It rises from about 0.5 feet per mph at 20° to about 1.45 at 50-55°. It appears to fall at higher
-angles, but only 49 of 5,992 fly balls were hit above 60°, so that part is uncertain.
+It rises from about 0.6 feet per mph at 20° to about 1.5 at 45-55°. It appears to fall at higher
+angles, but only 66 of 7,197 fly balls were hit above 60°, so that part is uncertain.
 
 ## From distance to home runs
 
 Home runs are a yes-or-no outcome, so I used a logistic GAM with the same terms. In this model, each
-mph of tailwind raises the odds of a home run by about 11%, or about 5 times the odds for a 15 mph
+mph of tailwind raises the odds of a home run by about 12%, or about 5.4 times the odds for a 15 mph
 tailwind. Odds aren't probability, though, and the same multiplier matters very differently depending
 on the ball:
 
 | Ball, hit to center | 15 mph headwind | Calm | 15 mph tailwind |
 |---|---:|---:|---:|
 | Weak: 90 mph, 30° | under 0.1% | under 0.1% | 0.1% |
-| **Borderline: 101 mph, 28°** | **5.5%** | **22.5%** | **59.1%** |
-| Crushed: 110 mph, 28° | 63.2% | 89.5% | 97.7% |
+| **Borderline: 101 mph, 28°** | **5.1%** | **22.5%** | **61.1%** |
+| Crushed: 110 mph, 28° | 59.5% | 88.8% | 97.7% |
 
 Weak contact stays in the park, and crushed balls mostly go out anyway. **The wind matters most on
 balls that land near the wall**, because that's where 30 feet can decide the outcome.
@@ -107,7 +109,7 @@ To test the model, I trained it only on earlier seasons and scored it on each la
 season rather than at random, because balls from one game share conditions, and a random split would
 also let the model train on the future.
 
-**What held up.** Adding weather improved the Brier score in all four test seasons, and the wind effect
+**What held up.** Adding weather improved the Brier score in all five test seasons, and the wind effect
 stayed stable, at about 10-12% higher odds per mph.
 
 | Test season | Brier, no weather | Brier, with weather | Odds ratio per mph |
@@ -116,18 +118,23 @@ stayed stable, at about 10-12% higher odds per mph.
 | 2023 | 0.0306 | 0.0272 | 1.107 |
 | 2024 | 0.0325 | 0.0302 | 1.111 |
 | 2025 | 0.0350 | 0.0267 | 1.103 |
+| 2026 | 0.0357 | 0.0285 | 1.113 |
 
-**What didn't.** Calibration had looked excellent on the training data, but the model predicted too many
-home runs in every test season, even when given each ball's actual contact:
+**What didn't.** Calibration had looked excellent on the training data, but the home-run totals missed
+in every test season, even when the model was given each ball's actual contact. It predicted too many
+in 2022-2025 and too few in 2026:
 
 ![Predicted and actual home runs at Wrigley by test season](../output/predicted_vs_actual_by_season.png)
 
-The miss is about 18% for 2025, and it's largest for balls predicted at 25-50%, where the model said
-36.9% and 22.8% actually left the park. That's the part of the S-curve where a small change in carry
-matters most. The model still ranked balls well, so this mainly matters for forecasting totals.
+The miss was 18% too high for 2025 (238 predicted, 201 actual) and 8% too low for 2026 (220 predicted,
+238 actual). In both seasons it's largest for balls predicted at 25-50%: in 2025 the model said 36.9%
+and 22.8% left the park, and in 2026 it said 36.4% and 45.7% did. That's the part of the S-curve where a
+small change in carry matters most. The model still ranked balls well, so this mainly matters for
+forecasting totals.
 
 **Why it happens.** This is drift rather than overfitting: the relationship itself changed. Among
-hard-hit balls at good launch angles, exit velocity barely moved, but distance and home-run rate fell:
+hard-hit balls at good launch angles, exit velocity barely moved, but distance and home-run rate fell
+through 2025 and then partly came back in 2026:
 
 | Season | Avg. exit velocity | Avg. distance | HR rate | Avg. tailwind |
 |---|---:|---:|---:|---:|
@@ -137,14 +144,21 @@ hard-hit balls at good launch angles, exit velocity barely moved, but distance a
 | 2023 | 104.4 | 395 ft | 66.8% | +0.3 |
 | 2024 | 104.6 | 390 ft | 58.3% | -2.0 |
 | 2025 | 104.0 | 386 ft | 58.8% | -0.9 |
+| 2026 | 104.4 | 393 ft | 69.1% | -0.5 |
 
 Less tailwind explains only about 2 of the 13 feet lost from 2021 to 2025, and it's already in the model.
-Something else changed how far the same contact carries. It could be the ball, how balls are stored, or
-air conditions I don't measure, and this data can't separate those.
+Then 2026 got back about 7 of those feet with almost the same tailwind. Something other than the wind
+changes how far the same contact carries from season to season. It could be the ball, how balls are
+stored, or air conditions I don't measure, and this data can't separate those. 2026 also shows the drift
+isn't a steady decline that a model can simply follow.
 
-**The partial fix.** Training only on 2022-2024 improved the 2025 test, from 238 predicted home runs to
-224 (201 actual), and the Brier score from 0.0267 to 0.0252. It's still too high, and I only tested this
-fix on one season. The final model uses 2022-2025.
+**A fix that didn't hold up.** In the first version of this analysis, training only on recent seasons
+(2022-2024) improved the 2025 test, from 238 predicted home runs to 224 (201 actual), and the Brier score
+from 0.0267 to 0.0252. With 2026 as a second test season, the same idea made things worse. Training on
+2022-2025 predicted 207 home runs for 2026 against 220 from all seasons (238 actual), with a Brier score
+of 0.0290 vs. 0.0285. Recent seasons had learned the low-carry years, and 2026 carried more like the
+older ones. The final model still uses 2022 onward (now 2022-2026), so its estimates sit inside the
+current era. But a recent-only training window isn't a reliable fix, and the drift is still open.
 
 ## Results
 
@@ -153,45 +167,49 @@ wind?
 
 ![Home runs per game added or removed by each wind direction](../output/wind_effect_by_direction.png)
 
-- **By game:** the middle half of games fall between about -0.34 and +0.21 home runs from wind. On the
-  biggest days it's much larger: the top estimate is +4.6, on May 20, 2022, with 25 mph out to center
+- **By game:** the middle half of games fall between about -0.38 and +0.28 home runs from wind. On the
+  biggest days it's much larger: the top estimate is +5.0, on May 20, 2022, with 25 mph out to center
   and 85°. That game had 11 home runs, and it's an extreme case.
-- **By season:** it mostly cancels, adding or removing about 1-6% of a season's home runs. The largest is
-  2024, at about 9 fewer out of 153.
+- **By season:** it mostly cancels, adding or removing about 1-7% of a season's home runs. The largest is
+  2024, at about 10 fewer out of 153. In 2026 the wind added about 6 of Wrigley's 238 home runs.
 - **Skew:** the wind can add more than it can remove, since a game can only lose the home runs it would
   otherwise have had.
 
 ## The forecast
 
-Before a game, nobody knows what contact there will be. So the forecast replays Wrigley's 2022-2025
+Before a game, nobody knows what contact there will be. So the forecast replays Wrigley's 2022-2026
 batted balls under the forecast weather and adds up their home-run chances per game.
 
 | Weather | Expected home runs |
 |---|---:|
-| Calm, 70° | 2.23 |
-| 10 mph out to center, 75° | 3.02 |
-| 20 mph out to center, 85° | 4.01 |
-| 10 mph in from center, 60° | 1.46 |
-| 20 mph in from center, 50° | 0.86 |
-| 15 mph left to right, 70° | 2.20 |
+| Calm, 70° | 2.35 |
+| 10 mph out to center, 75° | 3.24 |
+| 20 mph out to center, 85° | 4.35 |
+| 10 mph in from center, 60° | 1.50 |
+| 20 mph in from center, 50° | 0.84 |
+| 15 mph left to right, 70° | 2.33 |
 
-**Does it work?** I tested it on 2025 using a model trained on 2022-2024. Its average miss was 1.46 home
-runs per game, about 13% better than always guessing the past average (1.67). That's still a large miss
-for one game, because a lot of a game's home runs can't be known in advance.
+**Does it work?** I tested it on 2026 using a model trained on 2022-2025. Its average miss was 1.57 home
+runs per game, about 9% better than always guessing the past average (1.73). That's still a large miss
+for one game, because a lot of a game's home runs can't be known in advance. The first version, tested
+on 2025 with a model trained on 2022-2024, missed by 1.46 vs. 1.67, about 13% better.
 
 | Forecast group | Games | Forecast | Actual |
 |---|---:|---:|---:|
-| Low | 27 | 1.46 | 1.41 |
-| Middle | 26 | 1.99 | 2.12 |
-| High | 26 | 2.69 | 4.15 |
+| Low | 27 | 1.50 | 1.48 |
+| Middle | 27 | 2.16 | 3.22 |
+| High | 27 | 3.08 | 4.11 |
 
-It's good at ranking days, but it underestimates the biggest ones.
+It ranks days in the right order, but it underestimates the middle and high groups by about one home
+run per game.
 
-It also ran low overall in 2025, at 2.04 forecast vs. 2.54 actual, even though the model runs high when
-it knows the contact. Both are true because two errors push in opposite directions. 2025 had more and
-better contact than the seasons being replayed, at 3.2 hard-hit balls at good angles per game vs. 2.3.
-The forecast assumed the old contact, which made it too low, while contact has been carrying less than the
-model expects, which pushes it too high.
+It also ran low overall in 2026, at 2.25 forecast vs. 2.94 actual. Wrigley's 238 home runs in 2026 were
+the most of any season in this data. This time the two errors push the same way. 2026 had more balls in
+the air than the seasons being replayed (27.2 per game vs. 25.0), though the same number of hard-hit
+balls at good angles (2.5 per game), so replaying old contact made the forecast too low. And contact
+carried more than the model expected, which also pushed it too low. In 2025 the errors had pushed in
+opposite directions: more hard contact (3.2 per game vs. 2.3) made the forecast too low, while the
+model's overestimate of carry pushed it up.
 
 ## Limitations
 
@@ -200,7 +218,8 @@ model expects, which pushes it too high.
 - **The what-if assumes players don't adjust.** Pitchers may pitch differently, and outfielders may play
   deeper, on windy days.
 - **The forecast describes a typical game.** It knows nothing about the lineups or starting pitchers.
-- **Drift isn't explained.** I can show that contact is carrying less, but not why.
+- **Drift isn't explained.** I can show that carry changes from season to season, down through 2025 and
+  back up in 2026, but not why.
 
 ## What I'd do next
 
