@@ -10,7 +10,7 @@ suppressPackageStartupMessages({
 })
 
 air <- load_air_balls("venue_name = 'Wrigley Field'")
-TEST_SEASON <- max(air$season)
+TEST_SEASON <- newest_full_season(air)
 
 # Validation showed older seasons teach a relationship that no longer holds.
 final_balls <- subset(air, season >= FIRST_RECENT_SEASON)
@@ -37,7 +37,8 @@ print(summary(by_game$hr_from_wind))
 
 summarise_groups <- function(column) {
   do.call(rbind, lapply(split(by_game, by_game[[column]]), function(d) {
-    row <- data.frame(games = nrow(d), home_runs = sum(d$home_runs), hr_per_game = round(mean(d$home_runs), 2),
+    row <- data.frame(games = nrow(d), home_runs = sum(d$home_runs), expected_hr = round(sum(d$expected_hr)),
+                      hr_per_game = round(mean(d$home_runs), 2),
                       avg_mph = round(mean(d$wind_speed), 1), hr_from_wind_per_game = round(mean(d$hr_from_wind), 2),
                       hr_from_wind_total = round(sum(d$hr_from_wind), 1))
     row[[column]] <- d[[column]][1]

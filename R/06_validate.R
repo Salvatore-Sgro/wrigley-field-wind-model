@@ -10,19 +10,22 @@ suppressPackageStartupMessages({
 })
 
 air <- load_air_balls("venue_name = 'Wrigley Field'")
-TEST_SEASON <- max(air$season)
+TEST_SEASON <- newest_full_season(air)
 
 # ---- Walk-forward: always train only on earlier seasons -------------------------------
 walk_forward <- do.call(rbind, lapply(FIRST_RECENT_SEASON:TEST_SEASON, function(test_season) {
   train <- subset(air, season < test_season)
   test <- subset(air, season == test_season)
   with_weather <- fit_hr_model(train)
+  no_wind <- fit_hr_model_no_wind(train)
   no_weather <- fit_hr_model_no_weather(train)
   p_with <- predict(with_weather, test, type = "response")
+  p_no_wind <- predict(no_wind, test, type = "response")
   p_without <- predict(no_weather, test, type = "response")
   data.frame(
     season = test_season,
     brier_no_weather = round(brier(test$is_hr, p_without), 4),
+    brier_temp_only = round(brier(test$is_hr, p_no_wind), 4),
     brier_with_weather = round(brier(test$is_hr, p_with), 4),
     odds_ratio_per_mph = round(exp(coef(with_weather)[["wind_out"]]), 3),
     predicted_hr = round(sum(p_with)),
@@ -57,22 +60,29 @@ p_base <- rep(mean(train$is_hr), nrow(test))
 p_logistic <- predict(glm(is_hr ~ wind_out + launch_speed + launch_angle + temp, data = train, family = binomial),
                       test, type = "response")
 p_no_weather <- predict(fit_hr_model_no_weather(train), test, type = "response")
+p_no_wind <- predict(fit_hr_model_no_wind(train), test, type = "response")
 save_table(data.frame(
-  model = c("Average rate", "Logistic regression", "GAM, no weather", "GAM, with weather"),
+  model = c("Average rate", "Logistic regression", "GAM, no weather", "GAM, temperature only", "GAM, with weather"),
   brier = round(c(brier(test$is_hr, p_base), brier(test$is_hr, p_logistic),
-                  brier(test$is_hr, p_no_weather), brier(test$is_hr, p_all)), 4),
+                  brier(test$is_hr, p_no_weather), brier(test$is_hr, p_no_wind), brier(test$is_hr, p_all)), 4),
   log_loss = round(c(log_loss(test$is_hr, p_base), log_loss(test$is_hr, p_logistic),
-                     log_loss(test$is_hr, p_no_weather), log_loss(test$is_hr, p_all)), 4)
+                     log_loss(test$is_hr, p_no_weather), log_loss(test$is_hr, p_no_wind),
+                     log_loss(test$is_hr, p_all)), 4)
 ), paste0("scores_on_", TEST_SEASON))
 
-calibration <- data.frame(p = p_all, y = test$is_hr)
-calibration$bucket <- cut(calibration$p, c(0, .01, .05, .1, .25, .5, .75, .9, 1), include.lowest = TRUE)
-save_table(do.call(rbind, lapply(split(calibration, calibration$bucket), function(d) data.frame(
-  predicted_range = as.character(d$bucket[1]), balls = nrow(d),
-  predicted = round(mean(d$p), 3), actual = round(mean(d$y), 3)
-))), paste0("calibration_", TEST_SEASON))
+calibration_table <- function(p, y) {
+  d <- data.frame(p = p, y = y)
+  d$bucket <- cut(d$p, c(0, .01, .05, .1, .25, .5, .75, .9, 1), include.lowest = TRUE)
+  do.call(rbind, lapply(split(d, d$bucket), function(b) data.frame(
+    predicted_range = as.character(b$bucket[1]), balls = nrow(b),
+    predicted = round(mean(b$p), 3), actual = round(mean(b$y), 3)
+  )))
+}
+save_table(calibration_table(p_all, test$is_hr), paste0("calibration_", TEST_SEASON))
+# The same check on the seasons the model was trained on, for comparison.
+save_table(calibration_table(fitted(model_all), train$is_hr), "calibration_training")
 
-# ---- Why it runs high: the same contact has been carrying less ----------------------------
+# ---- Why the totals miss: the same contact carries differently from season to season --------
 hard_contact <- subset(air, launch_speed >= 100 & launch_angle >= 22 & launch_angle <= 34)
 save_table(do.call(rbind, lapply(split(hard_contact, hard_contact$season), function(d) data.frame(
   season = d$season[1], balls = nrow(d), hr_rate = round(mean(d$is_hr), 3),
@@ -81,7 +91,11 @@ save_table(do.call(rbind, lapply(split(hard_contact, hard_contact$season), funct
   avg_tailwind = round(mean(d$wind_out), 1)
 ))), "hard_contact_by_season")
 
-# ---- A fix: train only on recent seasons --------------------------------------------------
+save_table(do.call(rbind, lapply(split(air, air$season), function(d) data.frame(
+  season = d$season[1], games = length(unique(d$game_pk)), balls_in_air = nrow(d), home_runs = sum(d$is_hr)
+))), "home_runs_by_season")
+
+# ---- Does training only on recent seasons help? -----------------------------------------------
 recent <- subset(air, season >= FIRST_RECENT_SEASON & season < TEST_SEASON)
 p_recent <- predict(fit_hr_model(recent), test, type = "response")
 save_table(data.frame(
@@ -91,3 +105,20 @@ save_table(data.frame(
   predicted_hr = round(c(sum(p_all), sum(p_recent))),
   actual_hr = sum(test$is_hr)
 ), "recent_seasons_fix")
+
+# The same comparison in every season where both windows have training data, so the choice of
+# training window doesn't rest on a single test season.
+save_table(do.call(rbind, lapply((FIRST_RECENT_SEASON + 1):TEST_SEASON, function(test_season) {
+  test <- subset(air, season == test_season)
+  p_every <- predict(fit_hr_model(subset(air, season < test_season)), test, type = "response")
+  p_recent <- predict(fit_hr_model(subset(air, season >= FIRST_RECENT_SEASON & season < test_season)),
+                      test, type = "response")
+  data.frame(
+    season = test_season,
+    brier_all_earlier = round(brier(test$is_hr, p_every), 4),
+    brier_recent_only = round(brier(test$is_hr, p_recent), 4),
+    predicted_all_earlier = round(sum(p_every)),
+    predicted_recent_only = round(sum(p_recent)),
+    actual_hr = sum(test$is_hr)
+  )
+})), "training_window_by_season")

@@ -41,7 +41,8 @@ save_table(data.frame(
 ), "distance_model_comparison")
 
 # Why the estimate moves: controls correlated with tailwind were inflating or hiding part of it.
-print(round(cor(wr[, c("wind_out", "launch_speed", "launch_angle", "temp")]), 2))
+correlations <- round(cor(wr[, c("wind_out", "launch_speed", "launch_angle", "temp")]), 2)
+save_table(cbind(variable = rownames(correlations), as.data.frame(correlations)), "wrigley_fly_ball_correlations")
 
 best <- distance_models[["Add hit direction"]]
 same_ball <- data.frame(launch_speed = 100, launch_angle = 28, spray_angle = 0, temp = 70, wind_out = c(-15, 0, 15))
@@ -51,11 +52,18 @@ save_table(cbind(same_ball["wind_out"], predicted_distance_ft = round(predict(be
 # ---- Wrigley vs other open-air parks ------------------------------------------------
 parks <- lm(hit_distance_sc ~ wind_out * is_wrigley + launch_speed + launch_angle + I(launch_angle^2) + temp,
             data = outdoor)
-parks_coef <- coef(parks)
+park_effects <- function(m) {
+  b <- coef(m)
+  c(other = b[["wind_out"]], wrigley = b[["wind_out"]] + b[["wind_out:is_wrigley"]], gap = b[["wind_out:is_wrigley"]])
+}
+# Intervals resample whole games, since every ball in a game shares one wind reading.
+parks_boot <- game_bootstrap(outdoor, function(d) park_effects(update(parks, data = d)))
+parks_est <- park_effects(parks)
 save_table(data.frame(
-  parks = c("Other open-air parks", "Wrigley Field"),
-  ft_per_mph_tailwind = round(c(parks_coef[["wind_out"]],
-                                parks_coef[["wind_out"]] + parks_coef[["wind_out:is_wrigley"]]), 2)
+  parks = c("Other open-air parks", "Wrigley Field", "Wrigley minus others"),
+  ft_per_mph_tailwind = round(parks_est, 2),
+  low = round(apply(parks_boot, 2, quantile, 0.025), 2),
+  high = round(apply(parks_boot, 2, quantile, 0.975), 2)
 ), "tailwind_effect_by_park")
 
 # ---- Does tailwind matter more on some fly balls? -----------------------------------
@@ -64,22 +72,26 @@ by_angle <- gam(hit_distance_sc ~ s(launch_angle, by = wind_out) + te(launch_spe
 print(AIC(best, by_angle))
 
 angles <- data.frame(launch_angle = seq(20, 65, 5), launch_speed = 100, spray_angle = 0, temp = 70)
-X_on  <- predict(by_angle, transform(angles, wind_out = 1), type = "lpmatrix")
-X_off <- predict(by_angle, transform(angles, wind_out = 0), type = "lpmatrix")
-X_diff <- X_on - X_off
-effect <- as.numeric(X_diff %*% coef(by_angle))
-se <- sqrt(rowSums((X_diff %*% vcov(by_angle)) * X_diff))
+angle_effects <- function(m) {
+  as.numeric(predict(m, transform(angles, wind_out = 1)) - predict(m, transform(angles, wind_out = 0)))
+}
+# The model's own standard errors treat every ball as independent, which overstates certainty here.
+# The band resamples whole games instead.
+angle_boot <- game_bootstrap(wr, function(d) angle_effects(update(by_angle, data = d)))
+effect <- angle_effects(by_angle)
 angle_effect <- data.frame(launch_angle = angles$launch_angle, ft_per_mph = round(effect, 2),
-                           low = round(effect - 2 * se, 2), high = round(effect + 2 * se, 2))
+                           low = round(apply(angle_boot, 2, quantile, 0.025), 2),
+                           high = round(apply(angle_boot, 2, quantile, 0.975), 2))
 save_table(angle_effect, "tailwind_effect_by_launch_angle")
-print(table(cut(wr$launch_angle, c(0, 25, 35, 45, 55, 60, 65, 90))))
+angle_counts <- as.data.frame(table(launch_angle = cut(wr$launch_angle, c(-90, 25, 35, 45, 55, 60, 65, 90))))
+save_table(setNames(angle_counts, c("launch_angle", "fly_balls")), "wrigley_fly_balls_by_launch_angle")
 
 chart <- ggplot(angle_effect, aes(launch_angle, ft_per_mph)) +
   geom_hline(yintercept = 0, colour = COLOR_MUTED) +
   geom_ribbon(aes(ymin = low, ymax = high), fill = COLOR_WRIGLEY, alpha = 0.18) +
   geom_line(colour = COLOR_WRIGLEY, linewidth = 0.9) +
   labs(title = "Tailwind matters most on high fly balls",
-       subtitle = "Feet of distance per mph of tailwind at Wrigley, for a 100 mph ball. The band widens where data is thin.",
+       subtitle = "Feet of distance per mph of tailwind at Wrigley, for a 100 mph ball. 95% band from resampling games.",
        x = "Launch angle (degrees)", y = "Feet per mph of tailwind") +
   chart_theme()
 save_chart(chart, "tailwind_effect_by_launch_angle")
