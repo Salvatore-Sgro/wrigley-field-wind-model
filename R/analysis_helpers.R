@@ -8,8 +8,8 @@ read_only_connection <- function() {
   dbConnect(duckdb(DB_PATH, read_only = TRUE, shared_home = FALSE))
 }
 
-# Fly balls and line drives with usable weather. Nearly every home run is one of these types (see
-# output/batted_ball_types.csv); the rare ground-ball home run is left out.
+# Fly balls and line drives with usable weather. Every home run that left the park is one of these
+# types (see output/batted_ball_types.csv).
 load_air_balls <- function(where = "TRUE") {
   con <- read_only_connection()
   on.exit(dbDisconnect(con, shutdown = TRUE))

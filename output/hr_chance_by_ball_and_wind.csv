@@ -1,4 +1,4 @@
 "ball","exit_velocity","launch_angle","headwind_15","calm","tailwind_15"
 "Weak",90,30,0,0,0.001
-"Borderline",101,28,0.051,0.225,0.611
-"Crushed",110,28,0.595,0.888,0.977
+"Borderline",101,28,0.05,0.223,0.607
+"Crushed",110,28,0.588,0.885,0.976
