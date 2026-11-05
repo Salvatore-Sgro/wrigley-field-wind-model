@@ -91,7 +91,7 @@ chart <- ggplot(angle_effect, aes(launch_angle, ft_per_mph)) +
   geom_ribbon(aes(ymin = low, ymax = high), fill = COLOR_WRIGLEY, alpha = 0.18) +
   geom_line(colour = COLOR_WRIGLEY, linewidth = 0.9) +
   labs(title = "Tailwind matters most on high fly balls",
-       subtitle = "Feet of distance per mph of tailwind at Wrigley, for a 100 mph ball. 95% band from resampling games.",
+       subtitle = "Feet per mph of tailwind at Wrigley, for a 100 mph ball. Band: 95% interval from resampling games.",
        x = "Launch angle (degrees)", y = "Feet per mph of tailwind") +
   chart_theme()
 save_chart(chart, "tailwind_effect_by_launch_angle")

@@ -1,3 +1,4 @@
-"parks","ft_per_mph_tailwind"
-"Other open-air parks",0.19
-"Wrigley Field",1.13
+"parks","ft_per_mph_tailwind","low","high"
+"Other open-air parks",0.19,0.17,0.21
+"Wrigley Field",1.13,1.04,1.23
+"Wrigley minus others",0.94,0.85,1.04

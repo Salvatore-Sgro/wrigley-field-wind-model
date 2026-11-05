@@ -12,7 +12,8 @@ suppressPackageStartupMessages({
 air <- load_air_balls("venue_name = 'Wrigley Field'")
 TEST_SEASON <- newest_full_season(air)
 
-# Validation showed older seasons teach a relationship that no longer holds.
+# Recent seasons only (see FIRST_RECENT_SEASON). The forecast test below uses the same rule, so it
+# tests the method used for the final model.
 final_balls <- subset(air, season >= FIRST_RECENT_SEASON)
 final_model <- fit_hr_model(final_balls)
 

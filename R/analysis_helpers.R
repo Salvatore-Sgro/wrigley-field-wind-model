@@ -39,8 +39,11 @@ fit_hr_model_no_weather <- function(data) {
       data = data, family = binomial, method = "REML")
 }
 
-# Seasons from 2022 on are "recent": validation showed older seasons teach a relationship that no
-# longer holds. The newest season in the data is the out-of-sample test season.
+# Seasons from 2022 on are "recent". Carry fell after 2021, so the final model and the forecast test
+# train on these seasons only. Validation is mixed: across the 2023-2026 tests, recent-only training
+# beat training on every earlier season in 2 of 4 seasons and was slightly better on average
+# (output/training_window_by_season.csv), so this keeps estimates in the current era rather than
+# being a proven fix for drift.
 FIRST_RECENT_SEASON <- 2022
 
 # Writes a set of seasons compactly, e.g. c(2019, 2021, 2022, 2023) -> "2019, 2021-2023".

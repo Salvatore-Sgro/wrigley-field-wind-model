@@ -1,9 +1,9 @@
-"wind_label","games","home_runs","hr_per_game","avg_mph","hr_from_wind_per_game","hr_from_wind_total"
-"Out To CF",58,228,3.93,10.5,0.91,53
-"Out To LF",38,125,3.29,10.9,0.62,23.5
-"Out To RF",22,66,3,9,0.47,10.3
-"R To L",58,124,2.14,7.8,0.05,2.9
-"L To R",28,55,1.96,10.2,0,0.1
-"In From RF",66,140,2.12,7.5,-0.3,-20.1
-"In From LF",52,83,1.6,11.3,-0.48,-25
-"In From CF",81,132,1.63,8.6,-0.53,-43.2
+"wind_label","games","home_runs","expected_hr","hr_per_game","avg_mph","hr_from_wind_per_game","hr_from_wind_total"
+"Out To CF",58,228,221,3.93,10.5,0.91,53
+"Out To LF",38,125,128,3.29,10.9,0.62,23.5
+"Out To RF",22,66,62,3,9,0.47,10.3
+"R To L",58,124,131,2.14,7.8,0.05,2.9
+"L To R",28,55,56,1.96,10.2,0,0.1
+"In From RF",66,140,138,2.12,7.5,-0.3,-20.1
+"In From LF",52,83,84,1.6,11.3,-0.48,-25
+"In From CF",81,132,133,1.63,8.6,-0.53,-43.2
