@@ -27,7 +27,8 @@ save_table(dbGetQuery(con, "
               WHEN g.wind_label LIKE 'In%' THEN 'In'
               ELSE 'Cross, varying or calm' END AS wind_group,
          count(DISTINCT p.game_pk) AS games,
-         sum(CASE WHEN p.events = 'home_run' THEN 1 ELSE 0 END) AS home_runs,
+         sum(CASE WHEN p.events = 'home_run' AND coalesce(p.des, '') NOT ILIKE '%inside-the-park%'
+                  THEN 1 ELSE 0 END) AS home_runs,
          round(home_runs / games, 2) AS hr_per_game
   FROM pitches p
   JOIN games g ON p.game_pk = g.game_pk

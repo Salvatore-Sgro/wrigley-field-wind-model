@@ -1,5 +1,5 @@
 "bb_type","batted_balls","avg_distance_ft","home_runs"
-"ground_ball",371235,33,1
-"fly_ball",224019,316,36276
-"line_drive",207759,251,3736
+"ground_ball",371235,33,0
+"fly_ball",224019,316,36227
+"line_drive",207759,251,3709
 "popup",61430,127,0

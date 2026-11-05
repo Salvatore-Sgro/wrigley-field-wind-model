@@ -1,0 +1,5 @@
+"season","brier_all_earlier","brier_recent_only","predicted_all_earlier","predicted_recent_only","actual_hr"
+2023,0.0272,0.0281,205,180,197
+2024,0.0302,0.0292,176,163,153
+2025,0.0267,0.0252,238,224,201
+2026,0.0281,0.0285,220,207,237

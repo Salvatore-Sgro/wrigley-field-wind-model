@@ -13,20 +13,21 @@ runs should we expect given a weather forecast?
   compared with about 0.2 feet at other open-air parks.
 - **A 15 mph tailwind multiplies a ball's home-run odds by about 5.** The effect is largest on borderline
   balls: a 101 mph ball at 28° to center goes from about 5% in a headwind to about 61% in a tailwind.
-- **It matters by game more than by season.** The middle half of games fall between about -0.38 and +0.28
+- **It matters by game more than by season.** The middle half of games fall between about -0.38 and +0.27
   home runs from wind, with 2 or more on the biggest days. Over a season it mostly cancels, at about 1-7%.
 
 ## How it holds up
 
-- **The wind effect held up on unseen seasons.** Weather improved the Brier score in all five test seasons
-  (2022-2026), and the effect stayed stable at about 10-12% higher odds per mph.
+- **The wind effect held up on unseen seasons.** Adding wind to a model that already had temperature
+  improved the Brier score in all five test seasons (2022-2026), and the effect stayed stable at about
+  10-12% higher odds per mph.
 - **Home-run totals drift from season to season.** Given each ball's actual contact, the model predicted
   4-20% too many home runs in 2022-2025, as the same contact carried less after 2021. Then carry partly
-  came back in 2026, and the model predicted 8% too few (220 vs. 238). Training only on recent seasons
-  helped the 2025 test but made the 2026 test worse, so the drift is still unsolved. The final model
-  trains on 2022-2026.
-- **The pre-game forecast is better at ranking days than exact totals.** Its average miss on 2026 was 1.57
-  home runs per game, vs. 1.73 for always guessing the past average.
+  came back in 2026, and the model predicted 7% too few (220 vs. 237). Across the 2023-2026 tests,
+  training only on seasons from 2022 on beat training on all earlier seasons in two and lost in two, so
+  the drift is still unsolved. The final model trains on 2022-2026.
+- **The pre-game forecast is better at ranking days than exact totals.** Its average miss on 2026 was 1.56
+  home runs per game, vs. 1.71 for always guessing the past average.
 
 ## Reproducing the analysis
 
@@ -82,6 +83,9 @@ I built this project with help from an AI assistant, Claude, and used it to lear
 - Wind is one reading per game in eight coarse directions, so gusts and changes are missed.
 - The what-if estimates assume players don't adjust to the wind.
 - The forecast describes a typical Wrigley game and knows nothing about lineups or starting pitchers.
+  It assumes the average carry of 2022-2026, and a single season can run about 10% above or below it.
 - The cause of the season-to-season changes in carry (down through 2025, back up in 2026) isn't identified.
 - "Varies" wind readings are excluded, and "Calm" is treated as zero wind.
+- Home runs are balls that left the park. The 77 inside-the-park home runs (1 at Wrigley) are excluded.
+- Intervals resample whole games, since all balls in a game share one wind reading.
 - `hit_distance_sc` for caught balls is where the ball was caught, not where it would have landed.
